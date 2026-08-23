@@ -12,3 +12,35 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  # Prisma schema requires DATABASE_URL at generate/build time
+  - variable: DATABASE_URL
+    value: file:./prisma/dev.db
+    availability:
+      - BUILD
+  - variable: NEXT_PUBLIC_BASE_URL
+    secret: NEXT_PUBLIC_BASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    secret: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: STRIPE_SECRET_KEY
+    secret: STRIPE_SECRET_KEY
+    availability:
+      - RUNTIME
+  - variable: STRIPE_WEBHOOK_SECRET
+    secret: STRIPE_WEBHOOK_SECRET
+    availability:
+      - RUNTIME
+  - variable: ADMIN_PASSWORD
+    secret: ADMIN_PASSWORD
+    availability:
+      - RUNTIME
+  # Set after Turso is created:
+  # - variable: TURSO_DATABASE_URL
+  #   secret: TURSO_DATABASE_URL
+  # - variable: TURSO_AUTH_TOKEN
+  #   secret: TURSO_AUTH_TOKEN
