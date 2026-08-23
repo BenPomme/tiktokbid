@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "db:push": "echo not implemented yet",
+    "db:push": "prisma db push",
     "seed:trending": "echo not implemented yet",
     "outreach:draft": "echo not implemented yet"
   },

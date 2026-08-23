@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ListingSource {
+  paid
+  trending
+}
+
+model Listing {
+  id               String        @id @default(cuid())
+  url              String
+  urlKey           String        @unique
+  title            String
+  category         String?
+  source           ListingSource
+  activeTotalCents Int           @default(0)
+  clickCount       Int           @default(0)
+  hidden           Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  bids             Bid[]
+}
+
+model Bid {
+  id              String   @id @default(cuid())
+  listingId       String
+  listing         Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  amountCents     Int
+  stripeSessionId String   @unique
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+}
