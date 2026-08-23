@@ -58,16 +58,37 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true }, { status: 200 });
 }
 
+async function syncListingActiveTotal(
+  db: ReturnType<typeof getDb>,
+  listingId: string,
+  now: Date,
+) {
+  const bids = await db.bid.findMany({
+    where: { listingId },
+    select: { amountCents: true, expiresAt: true },
+  });
+  const activeTotalCents = recomputeActiveTotal(bids, now);
+  await db.listing.update({
+    where: { id: listingId },
+    data: { activeTotalCents },
+  });
+  return activeTotalCents;
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const stripeSessionId = session.id;
   const db = getDb();
+  const now = new Date();
 
-  // Idempotent: skip if we already credited this Checkout Session.
+  // Idempotent: if we already credited this Checkout Session, still recompute
+  // activeTotalCents in case a prior attempt created the bid but crashed before
+  // the listing update.
   const existingBid = await db.bid.findUnique({
     where: { stripeSessionId },
-    select: { id: true },
+    select: { id: true, listingId: true },
   });
   if (existingBid) {
+    await syncListingActiveTotal(db, existingBid.listingId, now);
     return;
   }
 
@@ -75,7 +96,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const url = meta.url?.trim();
   const urlKey = meta.urlKey?.trim();
   const title = meta.title?.trim() || "Untitled listing";
-  const amountCents = Number.parseInt(meta.amountCents ?? "", 10);
+  const metaAmountCents = Number.parseInt(meta.amountCents ?? "", 10);
+  // Prefer Stripe-settled amount_total when present; fall back to Session metadata.
+  const amountCents =
+    typeof session.amount_total === "number" && session.amount_total > 0
+      ? session.amount_total
+      : metaAmountCents;
 
   if (!url || !urlKey || !Number.isFinite(amountCents) || amountCents <= 0) {
     throw new Error(
@@ -83,43 +109,45 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     );
   }
 
-  const now = new Date();
   const expiresAt = new Date(now.getTime() + BID_TTL_MS);
 
-  // Upsert Listing by urlKey; promote to paid and refresh title/url on payment.
-  const listing = await db.listing.upsert({
-    where: { urlKey },
-    create: {
-      url,
-      urlKey,
-      title,
-      source: ListingSource.paid,
-      activeTotalCents: 0,
-    },
-    update: {
-      url,
-      title,
-      source: ListingSource.paid,
-    },
-  });
+  // Atomic upsert → create → recompute → update so a crash mid-handler is less
+  // likely to leave a Bid without a refreshed listing.activeTotalCents.
+  await db.$transaction(async (tx) => {
+    const listing = await tx.listing.upsert({
+      where: { urlKey },
+      create: {
+        url,
+        urlKey,
+        title,
+        source: ListingSource.paid,
+        activeTotalCents: 0,
+      },
+      update: {
+        url,
+        title,
+        source: ListingSource.paid,
+      },
+    });
 
-  await db.bid.create({
-    data: {
-      listingId: listing.id,
-      amountCents,
-      stripeSessionId,
-      expiresAt,
-    },
-  });
+    await tx.bid.create({
+      data: {
+        listingId: listing.id,
+        amountCents,
+        stripeSessionId,
+        expiresAt,
+      },
+    });
 
-  const bids = await db.bid.findMany({
-    where: { listingId: listing.id },
-    select: { amountCents: true, expiresAt: true },
-  });
-  const activeTotalCents = recomputeActiveTotal(bids, now);
+    const bids = await tx.bid.findMany({
+      where: { listingId: listing.id },
+      select: { amountCents: true, expiresAt: true },
+    });
+    const activeTotalCents = recomputeActiveTotal(bids, now);
 
-  await db.listing.update({
-    where: { id: listing.id },
-    data: { activeTotalCents },
+    await tx.listing.update({
+      where: { id: listing.id },
+      data: { activeTotalCents },
+    });
   });
 }
