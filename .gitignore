@@ -10,3 +10,6 @@ coverage/
 dist/
 .vercel/
 *.tsbuildinfo
+
+# Generated outreach drafts (seed JSON stays committed)
+data/outreach/

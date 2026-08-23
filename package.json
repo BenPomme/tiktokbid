@@ -11,8 +11,8 @@
     "start": "next start",
     "test": "vitest run",
     "db:push": "prisma db push",
-    "seed:trending": "echo not implemented yet",
-    "outreach:draft": "echo not implemented yet"
+    "seed:trending": "tsx scripts/seed-trending.ts",
+    "outreach:draft": "tsx scripts/draft-outreach.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
