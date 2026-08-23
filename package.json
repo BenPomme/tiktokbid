@@ -7,33 +7,34 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "test": "vitest run",
     "db:push": "prisma db push",
     "seed:trending": "tsx scripts/seed-trending.ts",
-    "outreach:draft": "tsx scripts/draft-outreach.ts"
+    "outreach:draft": "tsx scripts/draft-outreach.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "@prisma/adapter-libsql": "6.19.3",
     "@prisma/client": "6.19.3",
-    "next": "^15.5.23",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "stripe": "^22.5.0",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "autoprefixer": "^10.5.4",
+    "next": "^15.5.23",
     "postcss": "^8.5.26",
     "prisma": "6.19.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "stripe": "^22.5.0",
     "tailwindcss": "^3.4.17",
-    "tsx": "^4.23.12",
     "typescript": "^5.9.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.12",
     "vitest": "^4.1.11"
   }
 }
